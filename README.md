@@ -10,15 +10,12 @@ The shell is the control plane of agentic architecture.
 
 ---
 
-## The Shell as Control Plane
+## All roads lead to Unix
 
 The Unix philosophy advocates for focused tools, composition, text as universal interface, persistence via files, and separation of mechanism and policy. This is optimal for agent architectures. The field is rediscovering this through painful trial and error, arriving at primitives that Unix established decades ago. The Unix philosophy is the only computing philosophy that has scaled across every paradigm shift. When agent state is files and coordination is streams, reproducibility is trivial and instrumentation is free.
 
 When Anthropic says "simple, composable patterns," when Vercel says "just filesystems and bash," when Fly.io says "agents want computers, not sandboxes," when Ptacek says "you should write an agent" and builds one in 30 minutes — they're all pointing towards Unix.
 
-The shell is an interface for a human to issue natural-ish language commands to an interpreter that orchestrates tools. Understanding the shell deeply is understanding the design space that AI agents now inhabit.
-
-When you want to observe an agent's actions, you check the execution trace. Every command, every decision, every timestamp is inspectable with Unix tools. It's all Unix and it's all in the shell.
 
 ### The Six Primitives
 
@@ -31,7 +28,11 @@ When you want to observe an agent's actions, you check the execution trace. Ever
 | Exit codes | The unit of verification. Success, failure, needs-input. |
 | Mechanism/policy separation | The organizing principle. Same LLM, different soul file, different agent. |
 
-### Why the Shell?
+### The Shell as Control Plane
+
+The shell is an interface for a human to issue natural-ish language commands to an interpreter that orchestrates tools. Understanding the shell deeply is understanding the design space that AI agents now inhabit.
+
+When you want to observe an agent's actions, you check the execution trace. Every command, every decision, every timestamp is inspectable with Unix tools. It's all Unix and it's all in the shell.
 
 **Minimal adoption cost.** Every alternative coordination protocol — CORBA, D-Bus, REST, gRPC, MCP — requires ecosystem buy-in. The shell requires only: can you emit text?
 
