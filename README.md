@@ -1,18 +1,12 @@
 # Shell Agentics
 
-**The terminal is a 50-year-old prototype of an agentic interface.**
-
-Shell Agentics is the idea that process hierarchies, file descriptors, text streams, and exit codes provide the optimal abstraction layer for agent coordination. It is also a proof of concept toolkit of composable bash primitives that demonstrates this thesis through working code.
-
-It treats the LLM is an oracle, not a driver. Tool dispatch is controlled by explicit allowlists in shell scripts.
-
-The shell becomes the control plane of agent architectures.
-
----
+Shell Agentics is the idea that process hierarchies, file descriptors, text streams, and exit codes provide the optimal abstraction layer for agent coordination. It is also a proof of concept toolkit of composable Bash primitives that demonstrates this thesis through working code.
 
 ## All Roads Lead to Unix
 
-The Unix philosophy advocates for focused tools, composition, text as universal interface, persistence via files, and separation of mechanism and policy. This is optimal for agent architectures, and the field is discovering this through painful trial and error, reverse engineering primitives that Unix established decades ago. The Unix philosophy is the only computing philosophy that has scaled across every paradigm shift. When agent state is files and coordination is streams, reproducibility is trivial and instrumentation is free.
+The Unix philosophy advocates for focused tools, composition, text as universal interface, persistence via files, and separation of mechanism and policy. This is optimal for agent architectures, and the field is discovering this progressively through trial and error, reverse engineering primitives that Unix established decades ago. The Unix philosophy is the only computing philosophy that has scaled across every paradigm shift. 
+
+When agent state is files and coordination is streams, reproducibility is trivial, instrumentation is free, and how much the LLM controls becomes a decision you make per agent.
 
 ### The Six Primitives
 
@@ -27,27 +21,35 @@ The Unix philosophy advocates for focused tools, composition, text as universal 
 
 ## The Shell as Control Plane
 
-The shell is an interface for a human to issue natural-ish language commands to an interpreter that orchestrates tools. Understanding the shell is understanding the design space that AI agents now inhabit.
+The terminal is a 50-year-old prototype of an agentic interface. The shell is an interface for a human to issue natural-ish language commands to an interpreter that orchestrates tools. Understanding it is understanding the design space that AI agents now inhabit. The shell is the control plane of agentic architecture.
 
 When you want to observe an agent's actions, you check the execution trace. Every command, every decision, every timestamp is inspectable with Unix tools. 
 
-**Minimal adoption cost.** Every alternative coordination protocol — CORBA, D-Bus, REST, gRPC, MCP — requires ecosystem buy-in. The shell requires only: can you emit text?
+There is minimal adoption cost. Every alternative coordination protocol — CORBA, D-Bus, REST, gRPC, MCP — requires ecosystem buy-in. The shell requires only: can you emit text?
 
-**Perfect separation of concerns.** Shell provides execution. Agents provide intent. Files provide state. No component trusts another's internals.
+Unix has the ideal separation of concerns. Shell provides execution. Agents provide intent. Files provide state. No component trusts another's internals.
 
-**Recursive verification terminates.** Agents are the first software that needs to be inspected by other instances of itself. Natural language output cannot be programmatically verified without another LLM — turtles all the way down. Shell output can be grep'd, diff'd, hashed. The inspection chain has a ground floor.
-
-**50 years of selection pressure.** Every alternative has required centralized coordination to adopt. Every alternative eventually leaked or ossified. The shell is the result of selection.
+It allows for recursive verification termination. Agents are the first software that needs to be inspected by other instances of itself. Natural language output cannot be programmatically verified without another LLM — turtles all the way down. Shell output can be grep'd, diff'd, hashed. The inspection chain has a ground floor.
 
 ## Natural Language Coordination
 
-When natural language serves as coordination, execution, *and* verification — when "doing something" means "saying you did it" — the system loses its ground floor. Shell Agentics does not prohibit natural language agent coordination, it asserts a separation of concerns:
+When natural language serves exclusively as coordination, execution, *and* verification — when "doing something" means "saying you did it" — the system loses its ground floor.
+
+Building agents in the shell does not prohibit natural language agent coordination, but asserts a separation of concerns:
 
 - **Deliberation layer:** Unconstrained. Agents may coordinate, negotiate, and share knowledge in natural language.
 - **Execution layer:** Shell-semantic. Actions must be commands, file operations, or processes with observable effects.
 - **Verification layer:** Shell-inspectable. Ground truth is the execution trace, not the conversation about it.
 
-**Let agents chat about what to do. Log what they actually did.**
+How well this separation holds depends on which control model you choose.
+
+In **oracle mode**, the separation is enforced intentionally. The LLM only participates in the deliberation layer — it answers questions, provides judgment. All execution is shell commands in the orchestration script. Verification is the execution trace. The layers can't bleed into each other because the LLM has no mechanism to execute.
+
+In **bounded mode**, the separation holds but requires attention. The LLM can request tools from an allowlist, so it participates in execution decisions — but only within bounds the script author defined. Verification remains shell-inspectable.
+
+In **autonomous mode**, the separation requires discipline. The LLM controls execution decisions. The logging and audit primitives still capture what happened, so verification remains possible — but the deliberation and execution layers are no longer structurally separated. This is the same posture as traditional frameworks.
+
+**Let agents chat about what to do. Log what they actually did.** In oracle mode, this is guaranteed. In autonomous mode, it's a practice you have to maintain.
 
 ## The Oracle Model
 
@@ -227,14 +229,14 @@ Natural language    Structured APIs    Shell semantics
 
 When you receive a message from your agent saying "I've secured the server," you're trusting the agent's interpretation of "secured." When you see `chmod 600 ~/.ssh/*` in the execution log, you're trusting only your own understanding of shell semantics.
 
-**Chat view**
+**Left panel: Chat view**
 ```
 You: Back up the database and verify it
 Agent: Done! I've backed up the database and verified
        all checksums. Everything looks good. ✓
 ```
 
-**Shell view**
+**Right panel: Shell view**
 ```
 [09:00:01] pg_dump mydb > /backup/mydb-2026-02-04.sql
 [09:00:14] exit 0 (14.2s, 847MB)
@@ -243,40 +245,53 @@ Agent: Done! I've backed up the database and verified
 [09:00:15] exit 0
 ```
 
-The difference here is not about what data is available. Any agent harness can log the same `pg_dump` and `sha256sum` commands. A framework user who reads verbose logs sees the same execution trace. The difference is about what the system presents as its primary output — and therefore what the user actually looks at.
+One side requires trust. The other side *is* trust.
 
-The chat model's primary output is a natural language claim about execution. "I've backed up the database and verified all checksums" is a sentence the LLM generated. It could be accurate. It could also be confabulated — the LLM might say "verified all checksums" when it only ran `pg_dump` and skipped the verification. Natural language claims can diverge from what actually happened, and the divergence is invisible in the primary interface.
+Where you land on this gradient depends on which control model you choose:
 
-The shell model's primary output is the execution itself. `sha256sum /backup/mydb-2026-02-04.sql` with an exit code is not a claim — it is an artifact. That command either ran or it didn't. You are not trusting the LLM's description of what happened. You are reading what happened.
+**Oracle mode** gives you the right panel by construction. Every action in the execution trace was decided by the script author and is visible in the script source. The LLM contributed judgment ("what service is failing?"), not actions. You can verify everything the system did without trusting the LLM's account of what it did.
 
-One model presents a narrator who describes execution. The other removes the narrator and presents the execution directly. A framework user who ignores the natural language summary and reads the execution logs gets the same verification — but the system's default interface is the summary, not the log. A shell user who only reads the final `echo` output is trusting a summary too — but the system's default interface is the trace, not the summary.
+**Bounded mode** gives you the right panel for permitted tools — you can see exactly what executed — but the LLM chose *which* tools to call and in what order. You're trusting the LLM's tool selection within the allowlist. The execution trace shows what happened; the LLM's reasoning about *why* it chose those tools is opaque.
 
-The qualitative difference is in what serves as truth: natural language claims about execution, or execution artifacts themselves.
+**Autonomous mode** gives you a logged version of the left panel. The audit trail records every tool call — you can see what happened after the fact. But the LLM made every decision, and you're reconstructing its reasoning from the trace. This is the same trust posture as traditional frameworks, with better logging.
 
+The three modes are a trust dial. Oracle is full verification. Autonomous is full trust with audit. Bounded is in between. Shell Agentics lets you set the dial per agent based on what the task demands.
 
 ---
 
-## Substrate A vs. Substrate B
+## Script-Driven vs. LLM-Driven
 
-### Substrate A: The Agent as Shell
+The three control models (oracle, bounded, autonomous) define a spectrum between two poles:
 
-The agent is the orchestrator. You live inside the agent interface. The agent calls tools, but the agent controls the loop. Examples: Claude Code, Cursor, ChatGPT.
+### Script-driven: The agent in the shell
 
-Analogy: Emacs — a complete environment you inhabit.
-
-### Substrate B: The Agent in the Shell
-
-The agent is one tool among many. The shell orchestrates. Agents have stdin/stdout like any Unix filter. Composable in pipelines.
+The script controls the workflow. The LLM is one tool among many — called at specific points to provide judgment, then the script continues. Agents have stdin/stdout like any Unix filter. Composable in pipelines.
 
 Analogy: awk — powerful primitive, externally composed.
 
+```bash
+cat error.log | agen "diagnose" | agen "suggest fix" > recommendations.md
+```
+
+Oracle mode is purely script-driven. The human writes the workflow. The LLM fills in judgment. The workflow is auditable before it ever runs.
+
+### LLM-driven: The agent as shell
+
+The LLM controls the workflow. It decides what tools to call, in what order, and when it's done. The script is plumbing that executes requests and feeds results back.
+
+Analogy: Emacs — a complete environment you inhabit.
+
+Autonomous mode is purely LLM-driven. The LLM writes the workflow at runtime. The workflow is observable after the fact but not predictable in advance.
+
 ### The Coexistence
 
-Both will exist, like vim and grep — interactive tools for interactive work, composable filters for automation. They interoperate through files.
+Both exist for good reasons. Interactive exploration, open-ended research, creative problem-solving — these benefit from LLM-driven control. The LLM can discover approaches the script author didn't anticipate.
 
-But Substrate B is underbuilt.
+Production runbooks, deployment pipelines, security-critical operations, batch processing, CI/CD — these benefit from script-driven control. The workflow is deterministic, auditable, and composable with other Unix tools.
 
-The moment a human isn't in the loop — CI/CD pipelines, cron jobs, agent spawning sub-agents, distributed swarms — Substrate A's interactive affordances become liabilities. Substrate B is the API surface for agents when agents are infrastructure.
+Traditional frameworks give you LLM-driven and only LLM-driven. If you want script-driven, you leave the framework. Shell Agentics gives you both from the same primitives — and bounded mode for everything in between.
+
+The moment a human isn't in the loop — cron jobs, agent spawning sub-agents, distributed swarms — LLM-driven control becomes a liability. Script-driven is the natural mode for agents as infrastructure.
 
 ---
 
@@ -291,10 +306,17 @@ As AI compresses lower-order work toward zero time, valuable human contribution 
 | 2nd | Optimizing the automation | Building the eval that improves the prompt |
 | 3rd | Meta-optimizing | Building the system that generates evals |
 
-Substrate A (chat-shaped agents) traps users at the 0th order. Session-isolated, human-initiated, output-terminal. No persistent substrate for climbing.
+Climbing the derivative stack requires infrastructure that supports composition, observation, and iteration. Each layer needs to observe and control the layer below.
 
-Substrate B (Unix-shaped agents) enables the climb. Agents can be invoked from other agents. Outputs feed into inputs. Automation layers on automation. The filesystem persists. The shell composes.
+LLM-driven agents in autonomous mode are powerful at the 0th order — they do tasks. But they're difficult to compose into higher-order systems because the workflow is decided at runtime, opaquely, inside the LLM. You can't script what you can't predict. You can't optimize what you can't observe structurally. You can log what happened and study the logs, but the workflow itself isn't an artifact you can version, diff, or improve systematically.
 
+Script-driven agents in oracle mode are artifacts at every order. The skill script is a program — it can be versioned, diffed, tested, composed with other scripts, and optimized. Building a 2nd-order system means writing a script that runs and evaluates other scripts. Building a 3rd-order system means automating that evaluation. The derivative stack is natural because every layer is a script observing scripts.
+
+Practitioners are hitting this ceiling today. They want to build eval pipelines but can't easily capture agent outputs. They want to A/B test prompts at scale but can't run agents in batch mode. They want to compose multi-agent workflows but each agent demands interactive input. These are all symptoms of LLM-driven architectures resisting composition.
+
+Shell Agentics, in script-driven mode, enables the climb. The filesystem persists. The shell composes. The scripts are the artifacts that higher-order systems operate on.
+
+---
 
 ## The Three-Tier Architecture
 
@@ -363,7 +385,9 @@ If you can't `cat` it, be suspicious. Bash scripts over compiled binaries. Markd
 
 ### 6. Separation of Mechanism and Policy
 
-The LLM's capability is mechanism. The system prompt, tool availability, guardrails, and script files are policy. Don't bake policy into mechanism. Express domain logic through context.
+The LLM's capability is mechanism. The system prompt, tool availability, guardrails, and skill files are policy. Don't bake policy into mechanism. Express domain logic through context.
+
+The three control models are the clearest demonstration. The primitives — `agen`, `agen-log`, `agen-memory`, `agen-audit` — are mechanism. They work identically regardless of who controls the workflow. The choice of oracle, bounded, or autonomous mode is policy, expressed in the skill script. Switching from oracle to autonomous doesn't require changing infrastructure — it requires changing ten lines of bash. Frameworks bake the policy (LLM drives) into the mechanism (the tool-calling loop). Shell Agentics keeps them separate.
 
 > "The agent and its tool execution run on separate compute. You trust the agent's reasoning, but the sandbox isolates what it can actually do."
 > — Ashka Stephen, Vercel ([How to Build Agents with Filesystems and Bash](https://vercel.com/blog/how-to-build-agents-with-filesystems-and-bash), Jan 2026)
@@ -376,36 +400,15 @@ Long-horizon tasks exhaust context windows. Agent state drifts. You need compact
 > — Thomas Ptacek, Fly.io ([The Design & Implementation of Sprites](https://fly.io/blog/design-and-implementation/), Jan 2026)
 
 
-## Roadmap
+## What Exists
 
-### Phase 1: Core Primitives ✓
-- agent (exists, working)
-- alog (exists, working)
-- amem (exists, working)
-- aaud (exists, working)
-- ascr (exists, 2 scripts)
-- shellclaw reference system (exists, working)
+- [agen](https://github.com/shellagentics/agen) — LLM request primitive
+- [agen-log](https://github.com/shellagentics/agen-log) — execution logging
+- [agen-memory](https://github.com/shellagentics/agen-memory) — persistent context
+- [agen-audit](https://github.com/shellagentics/agen-audit) — log query
+- [agen-skills](https://github.com/shellagentics/agen-skills) — composable workflows
+- [shellclaw](https://github.com/shellagentics/shellclaw) — reference multi-agent system
 
-### Phase 2: Gateway and Routing
-- agent-gate — message gateway (chat ↔ stdin/stdout)
-- agent-route — pattern matching to route messages to agent scripts
-- shellagentics overview repo (this document, toolkit map, resources)
-
-### Phase 3: Security and Multi-Agent Hardening
-- Oracle model documentation and security guidelines
-- Inter-agent message signing
-- Per-agent Unix user isolation
-- Immutable soul file mounts
-
-### Phase 4: Tier 2 (SQLite Integration)
-- amem SQLite backend
-- alog SQLite backend
-- Concurrent multi-agent coordination primitives
-
-### Future: BEAM Agentics
-- Elixir/OTP implementation of the agent primitive set
-- GenServer-based agents with supervision trees
-- beamagentics.com
 
 ## Summary Points
 
@@ -413,7 +416,7 @@ Long-horizon tasks exhaust context windows. Agent state drifts. You need compact
 - The oracle model as security architecture. 82% of LLMs execute malicious commands from peer agents (Lupinacci et al., 2025). Shell Agentics structurally reduces this attack surface by keeping the LLM out of the tool-calling loop.
 - Simplicity validated by research. Single agents with tools outperform multi-agent orchestration in most studied cases (Kim et al., 2025). When multiple agents are warranted, the coordination mechanism must match the task structure.
 - Observability and control flow legibility. When agent state is files and coordination is streams, the execution trace is available through standard Unix tools. The orchestrating script is a readable artifact — diffable, git-blameable, reviewable — that shows what *can* happen before runtime, not just what *did* happen after the fact.
-- The derivative stack. As AI compresses lower-order work, valuable human contribution migrates upward. Substrate B enables this climb. Substrate A constrains it.
+- The derivative stack. As AI compresses lower-order work, valuable human contribution migrates upward. Script-driven agents enable this climb. LLM-driven agents constrain it.
 - 50 years of selection pressure. Every alternative coordination protocol has required centralized adoption. Every alternative eventually leaked or ossified. The shell persists because it requires only: can you emit text?
 
 ## References
@@ -437,9 +440,9 @@ Long-horizon tasks exhaust context windows. Agent state drifts. You need compact
 
 **Oracle model** — The architectural decision to keep the LLM out of the tool-execution loop. The LLM may request tool calls via structured JSON, but the shell script parses the request and matches it against an explicit `case` allowlist. Default-deny dispatch. Contrasted with the "driver model" where the framework automatically executes whatever the LLM requests.
 
-**Substrate A** — Agent as shell. The agent is the orchestrator; humans live inside the agent interface.
+**Script-driven** — The agent in the shell. The script controls the workflow; the LLM is one tool among many. Oracle mode is purely script-driven.
 
-**Substrate B** — Agent in the shell. The agent is a Unix filter; the shell orchestrates agents.
+**LLM-driven** — The agent as shell. The LLM controls the workflow; the script is plumbing. Autonomous mode is purely LLM-driven.
 
 **The derivative stack** — The migration of valuable human work from execution (0th order) to automation (1st) to optimization (2nd) to meta-optimization (3rd), as AI compresses lower-order work.
 
