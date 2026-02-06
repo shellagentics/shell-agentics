@@ -70,11 +70,11 @@ Framework model:
 
 ### How Shell Agentics Handles Tool Calling
 
-In Shell Agentics, the LLM is a pure function: text in, text out. The skill script — a bash program written by a human — decides what tools to invoke, when, and what context to provide. The LLM answers questions. It doesn't take direct action.
+In Shell Agentics, the LLM is a pure function: text in, text out. The agent script — a bash program written by a human — decides what tools to invoke, when, and what context to provide. The LLM answers questions. It doesn't take direct action.
 
 ```
 Shell Agentics model:
-  Human → Script → agen (oracle) → Script → Tool → Script → agen (oracle) → Result
+  Human → Script → agent (oracle) → Script → Tool → Script → agent (oracle) → Result
           ↑                                                                     |
           └──────────────── Script controls the entire flow ────────────────────┘
 ```
@@ -85,7 +85,7 @@ Lupinacci et al. (2025) tested 17 LLMs and found that **82.4% will execute malic
 
 In the framework model, this is catastrophic. A compromised or coerced LLM's malicious tool requests execute automatically because the loop is designed to execute whatever the LLM requests.
 
-In Shell Agentics, the skill script is always the gatekeeper. The LLM can suggest whatever it wants; the script decides what actually happens. This is the difference between "the LLM called `rm -rf /`" and "the LLM said 'you should delete all files' and the script disregarded it."
+In Shell Agentics, the agent script is always the gatekeeper. The LLM can suggest whatever it wants; the script decides what actually happens. This is the difference between "the LLM called `rm -rf /`" and "the LLM said 'you should delete all files' and the script disregarded it."
 
 This validates the oracle model. When agents communicate through text files rather than tool calls, and when a human-authored script is always the gatekeeper, the inter-agent trust attack surface is structurally reduced.
 
@@ -118,34 +118,34 @@ shellclaw (reference multi-agent system)
      ↓
  ┌───┼───┬──────────┐
  ↓   ↓   ↓          ↓
-agen  agen-log  agen-memory  agen-audit
+agent  alog  amem  aaud
  ↓
-agen-skills
+ascr
 ```
 
-### [agen](https://github.com/shellagentics/agen) — The LLM Request Primitive
+### [agent](https://github.com/shellagentics/agent) — The LLM Request Primitive
 
 `curl` for inference. Sends a prompt to an LLM, emits the response to stdout.
 
 ```bash
-cat error.log | agen "diagnose" | agen "suggest fix" > recommendations.md
+cat error.log | agent "diagnose" | agent "suggest fix" > recommendations.md
 ```
 
 Layered prompt construction (system prompt + piped input + positional task). Multi-backend support (claude-code CLI, `llm` CLI, direct Anthropic API).
 
-### [agen-skills](https://github.com/shellagentics/agen-skills) — Composable Workflows
+### [ascr](https://github.com/shellagentics/ascr) — Composable Workflow Scripts
 
-Shell scripts that orchestrate agen for specific workflows. Skills are programs that use the agent — not prompt templates. The locus of contral is inverted. Pattern: gather context → call agen → act on result.
+Shell scripts that orchestrate agent for specific workflows. Scripts are programs that use the agent — not prompt templates. The locus of control is inverted. Pattern: gather context → call agent → act on result.
 
-### [agen-memory](https://github.com/shellagentics/agen-memory) — Persistent Context
+### [amem](https://github.com/shellagentics/amem) — Persistent Context
 
 Filesystem-backed key-value store. One directory per agent, one file per key. Markdown by convention. Keyed memory overwrites; general memory appends with timestamps. Git-diffable, human-readable, zero dependencies.
 
-### [agen-log](https://github.com/shellagentics/agen-log) — Execution Logging
+### [alog](https://github.com/shellagentics/alog) — Execution Logging
 
 Structured append logger writing JSONL. Event types cover the agent lifecycle: request, reasoning, execution, complete, error. Dual logging: per-agent log + combined `all.jsonl`.
 
-### [agen-audit](https://github.com/shellagentics/agen-audit) — Log Query
+### [aaud](https://github.com/shellagentics/aaud) — Log Query
 
 Filter and query tool for JSONL logs. Convenience layer over grep/jq with AND-logic filter composition, date filtering, pretty/JSON output modes.
 
@@ -293,10 +293,10 @@ Instead of 50 sequential tool calls, the agent writes a script. More token-effic
 The system prompt is one layer. What matters is the total state at inference: system prompt, tool definitions, conversation history, files on disk, current query. Think in environments, not prompts.
 
 ### 5. Transparency Over Abstraction
-If you can't `cat` it, be suspicious. Bash scripts over compiled binaries. Markdown skills over proprietary formats. SQLite over SaaS data stores. Git repos over vendor lock-in.
+If you can't `cat` it, be suspicious. Bash scripts over compiled binaries. Markdown scripts over proprietary formats. SQLite over SaaS data stores. Git repos over vendor lock-in.
 
 ### 6. Separation of Mechanism and Policy
-The LLM's capability is mechanism. The system prompt, tool availability, guardrails, and skill files are policy. Don't bake policy into mechanism. Express domain logic through context.
+The LLM's capability is mechanism. The system prompt, tool availability, guardrails, and script files are policy. Don't bake policy into mechanism. Express domain logic through context.
 
 ### 7. Checkpoint/Restore as First-Class Primitive
 Long-horizon tasks exhaust context windows. Agent state drifts. You need compaction, checkpointing, and restore. Version control isn't just for code — it's for compute.
@@ -305,16 +305,16 @@ Long-horizon tasks exhaust context windows. Agent state drifts. You need compact
 ## Roadmap
 
 ### Phase 1: Core Primitives ✓
-- agen (exists, working)
-- agen-log (exists, working)
-- agen-memory (exists, working)
-- agen-audit (exists, working)
-- agen-skills (exists, 2 skills)
+- agent (exists, working)
+- alog (exists, working)
+- amem (exists, working)
+- aaud (exists, working)
+- ascr (exists, 2 scripts)
 - shellclaw reference system (exists, working)
 
 ### Phase 2: Gateway and Routing
-- agen-gate — message gateway (chat ↔ stdin/stdout)
-- agen-route — pattern matching to route messages to agent scripts
+- agent-gate — message gateway (chat ↔ stdin/stdout)
+- agent-route — pattern matching to route messages to agent scripts
 - shellagentics overview repo (this document, toolkit map, resources)
 
 ### Phase 3: Security and Multi-Agent Hardening
@@ -324,8 +324,8 @@ Long-horizon tasks exhaust context windows. Agent state drifts. You need compact
 - Immutable soul file mounts
 
 ### Phase 4: Tier 2 (SQLite Integration)
-- agen-memory SQLite backend
-- agen-log SQLite backend
+- amem SQLite backend
+- alog SQLite backend
 - Concurrent multi-agent coordination primitives
 
 ### Future: BEAM Agentics
