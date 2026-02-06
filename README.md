@@ -53,7 +53,7 @@ When natural language serves as coordination, execution, *and* verification — 
 
 ### How Most Agent Frameworks Handle Tool Calling
 
-In the standard framework model, the harness (Claude Code, Codex, Cursor, et al) sends an LLM a text prompt and a list of "tools" the LLM can request that the harness take — reading files, executing commands, searching the web, modifying code. The LLM can trigger this by responding back to the harness with a structured tool request (tool name + input parameters as JSON) instead of text. The harness either executes the tool automatically or confirms with the user (approval gate). The harness then feeds the result back and the  LLM generates again. This is a multi-turn protocol between harness and LLM. You could view the LLM as a pure function, and the harness as a mediator executing side effects. The loop is automated. The LLM drives.
+In the standard framework model, the harness (Claude Code, Codex, Cursor, et al) sends an LLM a text prompt and a list of "tools", ie. actions that the harness is able to take — reading files, executing commands, searching the web, modifying code. The LLM can ask the harness to take these actions by responding back to the harness with a structured tool request (tool name + input parameters as JSON) instead of text. The harness either executes the tool automatically or confirms with the user (approval gate). The harness then feeds the result back and the LLM generates again. This is a multi-turn protocol between harness and LLM. You could view the LLM as a pure function, and the harness as a mediator executing side effects. The loop is automated. The LLM drives.
 
 ```
 Framework model:
