@@ -4,7 +4,7 @@
 
 Shell Agentics is the thesis that process hierarchies, file descriptors, text streams, and exit codes provide the optimal abstraction layer for agent coordination. It is also a toolkit of composable bash primitives that demonstrates this thesis through working code.
 
-The LLM is an oracle, not a driver. Decisions live in auditable scripts.
+The LLM is an oracle, not a driver. Tool dispatch is controlled by explicit allowlists in shell scripts.
 
 The shell is the control plane of agentic architecture.
 
@@ -70,11 +70,21 @@ Framework model:
 
 ### How Shell Agentics Handles Tool Calling
 
-In Shell Agentics, the LLM is a pure function: text in, text out. The agent script — a bash program written by a human — decides what tools to invoke, when, and what context to provide. The LLM answers questions. It doesn't take direct action.
+In Shell Agentics, the orchestrating script calls `agent` to get a response. When the LLM returns a structured tool-call request — JSON specifying the tool name and arguments — the script parses the response and matches the tool name against a `case` statement: an explicit allowlist of permitted tools.
+
+```bash
+case "$tool" in
+  ping)    result=$("$TOOLS_DIR/ping.sh" "$args") ;;
+  curl)    result=$("$TOOLS_DIR/curl.sh" "$args") ;;
+  *)       result="Tool not permitted: $tool" ;;
+esac
+```
+
+Only tools listed in the `case` execute. Unmatched requests fall through. This is default-deny dispatch — the same posture as a firewall with an allowlist. The LLM can request any tool; only those with an explicit match will run.
 
 ```
 Shell Agentics model:
-  Human → Script → agent (oracle) → Script → Tool → Script → agent (oracle) → Result
+  Human → Script → agent → Script → [case match?] → Tool → Script → agent → Result
           ↑                                                                     |
           └──────────────── Script controls the entire flow ────────────────────┘
 ```
@@ -90,11 +100,17 @@ In Shell Agentics, the agent script is always the gatekeeper. The LLM can sugges
 This validates the oracle model. When agents communicate through text files rather than tool calls, and when a human-authored script is always the gatekeeper, the inter-agent trust attack surface is structurally reduced.
 
 
-### Why This Matters: Observability
+### Why This Matters: Observability and Control Flow Legibility
 
-In the framework model, observability requires structured logging inside the tool-calling loop — after the fact, after the tool has already been called.
+Shell Agentics provides two complementary properties that together define its approach to trust.
 
-In Shell Agentics, the execution trace is the script itself. `set -x` shows every call, every variable, every branch. You can insert `read -p "Continue?"` between steps. The observability isn't bolted on — it's inherent.
+**Observability.** Every tool invocation is a visible line in the script. The execution trace — which tools ran, with what arguments, in what order — is available through standard Unix mechanisms: `set -x` traces every command as it executes, [`alog`](https://github.com/shellagentics/alog) records structured JSONL events, process output flows through pipes. Logging, conditional pauses (`read -p "Continue?"`), and additional checks can be inserted between any steps. Any system can achieve observability through sufficient logging. What matters is how naturally it integrates with the execution model.
+
+**Control flow legibility.** This is the structural property that distinguishes the shell model. The orchestrating script is a readable artifact that exists before runtime. `cat agent-1.sh` shows every tool that could run and under what conditions. The `case` statement is auditable as a specification — you can read it and know with certainty which tools are permitted and which are not.
+
+This legibility is diffable (`git diff` shows exactly what changed in the control flow between versions), git-blameable (who authorized this tool and when), and reviewable in a pull request (the team can inspect the control flow before it runs in production). It describes what *can* happen, not just what *did* happen.
+
+When the agentic loop lives in the shell script, both properties are present: you can observe what happened, and you can read what can happen. When the loop is internalized inside a framework process, observability is still achievable through logging — but control flow legibility requires understanding the framework's dispatch mechanism, its configuration, and its runtime state, rather than reading a single text file.
 
 ### What the Oracle Model Sacrifices
 
@@ -103,9 +119,7 @@ In Shell Agentics, the execution trace is the script itself. `set -x` shows ever
 - Efficiency on complex multi-tool tasks
 - Developer ergonomics for well-defined workflows
 
-These are real costs. The thesis is that they're worth paying for the security and observability gains, especially in multi-agent systems where inter-agent trust is the primary attack surface.
-
-But operating in systems of consequence, "autonomy" without observability is the flawed illusory product of a leaky abstraction, and in few cases is worth the integrity and safety trade off.
+These are real costs. The thesis is that they're worth paying for the security, observability, and control flow legibility gains, especially in multi-agent systems where inter-agent trust is the primary attack surface.
 
 ---
 
@@ -338,7 +352,7 @@ Long-horizon tasks exhaust context windows. Agent state drifts. You need compact
 - Independent convergence. Anthropic, Vercel, Fly.io, and independent practitioners arrived at the same architectural conclusions without coordination — filesystem as context substrate, bash as tool interface, simplicity over frameworks.
 - The oracle model as security architecture. 82% of LLMs execute malicious commands from peer agents (Lupinacci et al., 2025). Shell Agentics structurally reduces this attack surface by keeping the LLM out of the tool-calling loop.
 - Simplicity validated by research. Single agents with tools outperform multi-agent orchestration in most studied cases (Kim et al., 2025). When multiple agents are warranted, the coordination mechanism must match the task structure.
-- Observability by construction. When agent state is files and coordination is streams, reproducibility is trivial and instrumentation is free. No custom dashboards. No framework-specific monitoring.
+- Observability and control flow legibility. When agent state is files and coordination is streams, the execution trace is available through standard Unix tools. The orchestrating script is a readable artifact — diffable, git-blameable, reviewable — that shows what *can* happen before runtime, not just what *did* happen after the fact.
 - The derivative stack. As AI compresses lower-order work, valuable human contribution migrates upward. Substrate B enables this climb. Substrate A constrains it.
 - 50 years of selection pressure. Every alternative coordination protocol has required centralized adoption. Every alternative eventually leaked or ossified. The shell persists because it requires only: can you emit text?
 
@@ -361,7 +375,7 @@ Long-horizon tasks exhaust context windows. Agent state drifts. You need compact
 
 **Shell Agentics** — The thesis that Unix primitives are optimal for agent architectures. Also the toolkit implementing this thesis.
 
-**Oracle model** — The architectural decision to treat the LLM as a pure function (text in, text out) with the shell script controlling all tool invocation. Contrasted with the "driver model" where the LLM initiates tool calls.
+**Oracle model** — The architectural decision to keep the LLM out of the tool-execution loop. The LLM may request tool calls via structured JSON, but the shell script parses the request and matches it against an explicit `case` allowlist. Default-deny dispatch. Contrasted with the "driver model" where the framework automatically executes whatever the LLM requests.
 
 **Substrate A** — Agent as shell. The agent is the orchestrator; humans live inside the agent interface.
 
