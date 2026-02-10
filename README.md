@@ -6,7 +6,7 @@
 
 "I think your thesis is actually about survival through simplicity, not optimality through architecture. " - Claude
 
-The shell is all the tool you need for building simple agents. It is also a methodology for producing reliable knowledge with agents.
+Unix primitives are sufficient for a class of agent coordination problems, and many frameworks are premature abstractions over a substrate people don't yet understand. Embracing Unix composability also introduces a methodology for producing reliable knowledge with agents.
 
 (PROPOSED ADDITION / KIMI (rewrite to simplify wording): Unix primitives provide a verifiable substrate for agent architectures, enabling decomposition of reasoning into inspectable, refutable components. This methodology—'its just shell'—improves reliability not merely through proven engineering, but through epistemological discipline: the constraints of composability force clarity, and clarity enables verification.)
 
