@@ -146,9 +146,9 @@ The LLM is, in this framing, still a pure function — it takes a context window
 
 ### Both Exist for Good Reasons
 
-Interactive exploration, open-ended research, creative problem-solving — these benefit from LLM-driven control. The LLM can discover approaches the script author didn't anticipate. Ptacek's most compelling agent demo involved the LLM autonomously deciding to ping multiple Google properties to diagnose a network issue — behavior the developer didn't explicitly program. That emergence is real and valuable. You wouldn't want to pre-script a research agent's path through unfamiliar territory.
+Interactive exploration, open-ended research, creative problem-solving — these benefit from LLM-driven control. The LLM can discover approaches the script author didn't anticipate and demonstrate behavior the developer didn't explicitly program. That emergence is real and valuable. You wouldn't want to pre-script a research agent's path through unfamiliar territory.
 
-Production runbooks, deployment pipelines, security-critical operations, batch processing, CI/CD, cron jobs — these benefit from script-driven control. The workflow is deterministic, auditable, and composable. You wouldn't want a deployment agent freelancing.
+Production runbooks, deployment pipelines, security-critical operations, batch processing, CI/CD, cron jobs — these however require script-driven control. The workflow is deterministic, auditable, and composable. You wouldn't want a deployment agent demonstrating emergent unpredictable behavior.
 
 Neither architecture is correct in the abstract. The question is always: what does this specific agent, in this specific context, need?
 
