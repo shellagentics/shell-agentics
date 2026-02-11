@@ -10,6 +10,8 @@ Unix primitives are sufficient for a class of agent coordination problems, and m
 
 This document proposes that Unix and the shell provide a practical foundation for building and profiling local AI agent architectures. Introducing generic, uniform data representations enables them to become explicit, easily composed, and readily observable agentic systems. Process hierarchies, file descriptors, text streams, and exit codes provide robust abstractions for agent coordination, all native to the environment. The shell is the prototypical orchestration layer; Unix itself provides the underlying substrate of processes, files, and I/O streams. External capabilities, such as vector stores, distributed tracers, and semantic caches can be integrated as composable and inspectable components.
 
+This document also argues that the word "agent" misattributes system-level behavior to the LLM component, and that misattribution can cause real engineering failures.
+
 As Rich Hickey states in his talk, the "language of the system" as about processes, coordination, and topology being at a higher level than any single program. When the shell is both an interface and a constraint, it pays to at least have a strong understanding of what is possible when considering it provides the actual vocabulary before seeking higher abstractions.
 
 ## All Roads Lead to Unix
