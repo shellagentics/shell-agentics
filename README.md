@@ -44,7 +44,7 @@ cat error.log | llm -s "What service is failing?"
 
 This exists in Simon Willison's [`llm`](https://github.com/simonw/llm), bundled with a plugin ecosystem supporting hundreds of models. Raw `curl` to the Anthropic or OpenAI API does it with nothing installed at all. System prompts are just files you `cat` into the call.
 
-Everything else — logging, memory, audit, coordination — is already Unix. Files are memory. Append is logging. `grep` and `jq` are audit. Directories are namespaces. Cron is scheduling. Pipes are composition. `chmod +x` is the plugin system.
+Everything else — logging, memory, audit, coordination — is already Unix. Files are memory. Append is logging. `grep` and `jq` are audit. Directories are namespaces. Cron is scheduling. Pipes are composition. `chmod +x` is the plugin system. `--describe` is the plugin API.
 
 Six primary concepts that matter in agent architecture and have been battle tested for fifty years:
 
@@ -52,12 +52,12 @@ Six primary concepts that matter in agent architecture and have been battle test
 |---|---|
 | Processes | The unit of isolation. Each agent is a process. |
 | Files | The unit of state. Context, memory, and learnings are files. |
-| Executables | The unit of capability. An agent's skill set is its `$PATH`. |
+| Executables | The unit of capability. An agent's skill set is its `$PATH`. A tool that responds to `--describe` with its own JSON schema is self-documenting — no registry required. |
 | Text streams | The unit of communication. Pipes compose agents. |
 | Exit codes | The unit of verification. Success, failure, needs-input. |
 | Mechanism/policy separation | The organizing principle. Same LLM, different system prompt, different agent. |
 
-Every generation produces new coordination protocols — CORBA in the '90s, gRPC in the '10s, MCP and Skills today — each requiring ecosystem buy-in: server implementations, client libraries, schema definitions, capability negotiation. The shell requires only: can you emit text?
+Every generation produces new coordination protocols — CORBA in the '90s, gRPC in the '10s, MCP and Skills today — each requiring ecosystem buy-in: server implementations, client libraries, schema definitions, capability negotiation. The shell requires only: can you emit text? And for tool discovery: can you describe yourself when asked? A directory of executables that each respond to `--describe` with a JSON schema is a tool catalog derived at runtime — `ls` is the registry, the tool is the documentation. No server process, no handshake, no capability negotiation.
 
 ## Two paradigms: Script-Driven vs. LLM-Driven
 
@@ -386,7 +386,7 @@ The context window is precious and finite. Disk is nearly unlimited. Don't stuff
 Instead of 50 sequential tool calls, the agent writes a script. More token-efficient, more flexible, closer to how humans work.
 
 ### 4. Context Engineering > Prompt Engineering
-The system prompt is one layer. What matters is the total state at inference: system prompt, tool definitions, conversation history, files on disk, current query. Think in environments, not prompts.
+The system prompt is one layer. What matters is the total state at inference: system prompt, tool definitions, conversation history, files on disk, current query. Think in environments, not prompts. Context assembly is itself a composition problem: a `soul.md` identity file, context modules from a `context/` directory loaded alphabetically, tool schemas derived from `--describe` — each a focused file, composed into the full context at call time. This is pipes applied to prompt construction.
 
 ### 5. Transparency Over Abstraction
 If you can't `cat` it, be suspicious. Bash scripts over compiled binaries. Markdown over proprietary formats. SQLite over SaaS data stores. Git repos over vendor lock-in.
@@ -395,6 +395,8 @@ If you can't `cat` it, be suspicious. Bash scripts over compiled binaries. Markd
 The LLM's capability is mechanism. The system prompt, tool availability, guardrails, and skill scripts are policy. Don't bake policy into mechanism. Express domain logic through context.
 
 Script-driven and LLM-driven modes are the clearest demonstration. The primitives (any LLM CLI, files, pipes) are mechanism. They work identically regardless of who controls the workflow. The choice of script-driven or LLM-driven is policy, expressed in the skill script. Switching between them doesn't require changing infrastructure — it requires changing the script. Frameworks that couple to LLM-driven control bake the policy (LLM drives) into the mechanism (the tool-calling loop). These primitives keep them separate.
+
+Testing follows the same principle. Set an environment variable (`SHELLCLAW_STUB=1`) and the same tool interface returns canned responses instead of calling real APIs. The tool doesn't know it's being tested. The dispatch doesn't know it's running a stub. The mechanism is identical; only the policy changes. This is how you test agent systems offline — not by mocking frameworks, but by swapping policy.
 
 ### 7. Checkpoint/Restore as First-Class Primitive
 Long-horizon tasks exhaust context windows. Agent state drifts. You need compaction, checkpointing, and restore. Version control isn't just for code — it's for compute.
@@ -447,7 +449,7 @@ The rule of thumb: if your agent script has more logic about *how* to orchestrat
 
 ## What Exists
 
-- [**shellclaw**](https://github.com/shellagentics/shellclaw) — Reference multi-agent system. Three agents with system prompts ("souls"), shared filesystem coordination, cron scheduling. Built with `llm` and standard Unix tools. Demonstrates the nine-step agent pattern: LOG → LOAD → GATHER → COMPOSE → CALL → LOG → EXTRACT → SHARE → OUTPUT.
+- [**shellclaw**](https://github.com/Its-Just-Shell/shellclaw) — Library of composable primitives for agent architecture. Five orthogonal libraries (log, config, session, llm, compose) with a thin entry point that is one example composition. Self-describing tools via `--describe`, runtime catalog discovery, context module assembly, and example orchestration scripts (chat loop, pipe summarization, batch processing, soul swapping). Built with `llm` and standard Unix tools. The v1 nine-step agent pattern (LOG → LOAD → GATHER → COMPOSE → CALL → LOG → EXTRACT → SHARE → OUTPUT) decomposed into five reusable primitives — the primitives are more fundamental than the steps, and different compositions arrange them differently.
 
 The reference implementation is not the point. The point is the thesis. Any LLM CLI tool — `llm`, raw `curl`, or whatever comes next — can implement these patterns. Shellclaw exists to prove the architecture works, not to be the architecture.
 
