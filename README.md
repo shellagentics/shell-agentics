@@ -164,7 +164,7 @@ The control model is policy expressed in the skill script, not architecture bake
 
 Because the control model is policy, not infrastructure, compositions become possible that can't be expressed in systems where the control model is fixed.
 
-A deployment pipeline where the pre-flight checks are script-driven (deterministic, auditable — the script knows exactly what to verify) but the rollback decision is LLM-driven (needs judgment about partial failures, cascading dependencies, whether to retry or abort). This isn't two systems stitched together. It's one script that calls the LLM differently in different functions:
+A deployment pipeline where the pre-flight checks are script-driven (deterministic, auditable — the script knows exactly what to verify) but the rollback decision is LLM-driven (needs judgment about partial failures, cascading dependencies, whether to retry or abort). This is one script that calls the LLM differently in different functions:
 
 ```bash
 # Script-driven: deterministic pre-flight.
