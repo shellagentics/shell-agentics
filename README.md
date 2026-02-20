@@ -138,6 +138,8 @@ LLM-driven:
 
 The workflow is emergent. You can't read it before it runs — the LLM writes it at runtime. You can observe it after the fact through logs. The LLM contributes both intelligence and structure.
 
+## Tool Calling
+
 To deeper understand the LLM-driven architecture, we need to look at what tool calling is mechanistically.
 
 When you send a prompt to the Anthropic or OpenAI API, the harness (Claude Code, Opencode, et al) also sends a list of "tools" — JSON schemas describing functions the LLM can request. The LLM may respond with a structured tool request: "I want to call function X with arguments Y from this tool." The harness executes the requested function, captures the result, and sends a message back to the llm containing the tool result. The LLM generates again, now with the tool result in its context. It may request another tool call, or produce a final text response.
